@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>NSchemer</id>
+    <version>$version$</version>
+    <title>NSchemer</title>
+    <authors>Lionell Pack</authors>
+    <owners>Lionell Pack</owners>
+    <licenseUrl>https://github.com/Rophuine/NSchemer/blob/master/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/Rophuine/NSchemer</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>.Net-based database schema management</description>
+    <releaseNotes>Alpha version</releaseNotes>
+    <copyright>Copyright 2014 Lionell Pack</copyright>
+    <tags>database schema alpha</tags>
+  </metadata>
+</package>
