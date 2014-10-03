@@ -32,12 +32,20 @@ namespace NSchemer
             get { return ReadAllAppliedVersions(); }
         }
 
-        public override abstract List<Transition> Versions { get; }
-
         public override string TIME_FUNCTION
         {
             get { return "GetDate()"; }
         }
+
+        public string Catalog
+        {
+            get
+            {
+                var csb = new SqlConnectionStringBuilder(ConnectionString);
+                return csb.InitialCatalog;
+            }
+        }
+
         public enum DataType
         {
             // Markup each datatype with the correct SQL identifier to create it
@@ -122,9 +130,9 @@ namespace NSchemer
 
         public bool IsCurrent()
         {
-            List<Transition> missingUpdates = new List<Transition>();
+            List<ITransition> missingUpdates = new List<ITransition>();
             var allVersions = ReadAllAppliedVersions();
-            foreach (Transition v in Versions)
+            foreach (ITransition v in Versions)
             {
                 if (!allVersions.Contains(v.VersionNumber))
                     return false;
@@ -145,26 +153,45 @@ namespace NSchemer
             bool AppliedUpdate = true;
 
             // first apply all updates that are missing from this database's list of versions
-            List<Transition> missingUpdates = new List<Transition>();
-            foreach (Transition v in Versions)
+            List<ITransition> missingUpdates = new List<ITransition>();
+            foreach (ITransition v in Versions)
             {
                 if (!AllVersions.Contains(v.VersionNumber) && v.VersionNumber < DatabaseVersion)
                     missingUpdates.Add(v);
             }
             missingUpdates.Sort((x, y) => x.VersionNumber.CompareTo(y.VersionNumber));
-            foreach (Transition v in missingUpdates)
-                v.Up(this);
+            foreach (ITransition v in missingUpdates)
+                RunUpdate(v);
 
             // now update the remaining 
             while (!IsCurrent( ) && AppliedUpdate)
-                foreach (Transition v in Versions)
+                foreach (ITransition v in Versions)
                 {
                     if (v.VersionNumber > DatabaseVersion)
                     {
-                        AppliedUpdate = v.Up(this);
+                        AppliedUpdate = RunUpdate(v);
                         if (!AppliedUpdate) throw new Exception(string.Format("Version number {0} reported an error applying the update.", v.VersionNumber));
                     }
                 }
+        }
+
+        private bool RunUpdate(ITransition transition)
+        {
+            var result = transition.Up(this);
+            if (result)
+            {
+                // Add the version entry
+                try
+                {
+                    result = AddRow(VERSION_TABLE, string.Format("{0},{1}", transition.VersionNumber, TIME_FUNCTION));
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception(string.Format("Version upgrade to version {0} completed successfully, but the {1} table could not be updated to reflect this.",
+                        transition.VersionNumber, VERSION_TABLE), ex);
+                }
+            }
+            return result;
         }
 
         /// <summary>
@@ -261,8 +288,7 @@ namespace NSchemer
             List<double> allVersions = ReadAllAppliedVersions();
             if (allVersions.Count > 0)
                 return allVersions.Max();
-            else
-                return 0;
+            return 0;
         }
 
         /// <summary>
@@ -299,14 +325,15 @@ namespace NSchemer
             }
         }
 
-        public SqlClientDatabase(string ConnectionString)
-            : this(ConnectionString, "dbo")
+        public SqlClientDatabase(string connectionString)
+            : this(connectionString, "dbo")
         { }
-        public SqlClientDatabase(string ConnectionString, string SchemaName)
+        public SqlClientDatabase(string connectionString, string schemaName)
         {
-            this.SchemaName = SchemaName;
-            this.ConnectionString = ConnectionString + "MultipleActiveResultSets=true;";
-            Connection = new SqlConnection(this.ConnectionString);
+            SchemaName = schemaName;
+            var csb = new SqlConnectionStringBuilder(connectionString) {MultipleActiveResultSets = true};
+            ConnectionString = csb.ToString();
+            Connection = new SqlConnection(ConnectionString);
             Connection.Open();
         }
         public void Dispose()

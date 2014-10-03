@@ -41,9 +41,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DatabaseBase.cs" />
+    <Compile Include="ITransition.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SqlClientDatabase.cs" />
-    <Compile Include="Version.cs" />
+    <Compile Include="SqlScriptTransition.cs" />
+    <Compile Include="CodeTransition.cs" />
+    <Compile Include="VersionUpdateHandler.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\NSchemer.Interfaces\NSchemer.Interfaces.csproj">

@@ -4,7 +4,7 @@ namespace NSchemer
 {
     public abstract class DatabaseBase
     {
-        public abstract List<Transition> Versions { get; }
+        public abstract List<ITransition> Versions { get; }
         public abstract double DatabaseVersion { get; }
         public string VERSION_TABLE = "PEL_VERSIONING";
         public abstract string TIME_FUNCTION { get; }
