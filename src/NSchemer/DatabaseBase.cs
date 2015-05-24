@@ -6,9 +6,10 @@ namespace NSchemer
     {
         public abstract List<ITransition> Versions { get; }
         public abstract double DatabaseVersion { get; }
-        public string VERSION_TABLE = "PEL_VERSIONING";
-        public abstract string TIME_FUNCTION { get; }
+        public abstract string TimeFunction { get; }
         public abstract List<double> AllVersions { get; }
+
+        public virtual string VersionTable { get { return "NSCHEMER_VERSION"; } }
 
         public double LatestVersion
         {
@@ -29,11 +30,7 @@ namespace NSchemer
             {
                 if (Versions[indexOfCurrentVersion].VersionNumber > newVersion)
                     break;
-
-                else
-                {
-                    success = success && AddRow(VERSION_TABLE, string.Format("{0},{1}", Versions[indexOfCurrentVersion].VersionNumber.ToString(), TIME_FUNCTION));  // Add each version number up to the passed in value
-                }
+                success = success && AddRow(VersionTable, string.Format("{0},{1}", Versions[indexOfCurrentVersion].VersionNumber.ToString(), TimeFunction));  // Add each version number up to the passed in value
             }
             return success;
         }

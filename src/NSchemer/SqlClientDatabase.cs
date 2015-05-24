@@ -32,7 +32,7 @@ namespace NSchemer
             get { return ReadAllAppliedVersions(); }
         }
 
-        public override string TIME_FUNCTION
+        public override string TimeFunction
         {
             get { return "GetDate()"; }
         }
@@ -183,12 +183,12 @@ namespace NSchemer
                 // Add the version entry
                 try
                 {
-                    result = AddRow(VERSION_TABLE, string.Format("{0},{1}", transition.VersionNumber, TIME_FUNCTION));
+                    result = AddRow(VersionTable, string.Format("{0},{1}", transition.VersionNumber, TimeFunction));
                 }
                 catch (Exception ex)
                 {
                     throw new Exception(string.Format("Version upgrade to version {0} completed successfully, but the {1} table could not be updated to reflect this.",
-                        transition.VersionNumber, VERSION_TABLE), ex);
+                        transition.VersionNumber, VersionTable), ex);
                 }
             }
             return result;
@@ -299,11 +299,11 @@ namespace NSchemer
         private List<double> ReadAllAppliedVersions()
         {
 
-            if (TableExists(VERSION_TABLE))
+            if (TableExists(VersionTable))
             {
                 List<double> versionList = new List<double>();
 
-                string sql = string.Format("SELECT VERSIONNUMBER FROM {0}.{1}", SchemaName, VERSION_TABLE);
+                string sql = string.Format("SELECT VERSIONNUMBER FROM {0}.{1}", SchemaName, VersionTable);
                 using (SqlDataReader dr = RunQuery(sql))
                 {
                     while (dr.Read())
@@ -315,11 +315,11 @@ namespace NSchemer
             }
             else
             {
-                CreateTable(VERSION_TABLE, new List<Column>() {
+                CreateTable(VersionTable, new List<Column>() {
                     new Column("VERSIONNUMBER", DataType.FLOAT),
                     new Column("DATEAPPLIED", DataType.DATETIME)
                 });
-                string sql = string.Format("INSERT INTO {0}.{1} (VERSIONNUMBER, DATEAPPLIED) VALUES (0, GetDate())", SchemaName, VERSION_TABLE);
+                string sql = string.Format("INSERT INTO {0}.{1} (VERSIONNUMBER, DATEAPPLIED) VALUES (0, GetDate())", SchemaName, VersionTable);
                 RunSql(sql);
                 return new List<double>() { 0 };
             }
