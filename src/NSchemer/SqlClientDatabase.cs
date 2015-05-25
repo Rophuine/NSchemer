@@ -199,7 +199,17 @@ namespace NSchemer
         /// </summary>
         public void DeleteColumn(string tableName, string columnName)
         {
-            RunSql(string.Format("ALTER TABLE {0}.{1} DROP COLUMN [{2}]", SchemaName, tableName, columnName));
+            DeleteColumn(tableName, columnName, true);
+        }
+        
+        /// <summary>
+        /// Delete a column from the given table. Do not add [] around the column name.
+        /// </summary>
+        public void DeleteColumn(string tableName, string columnName, bool checkIfColumnExistsFirst = true)
+        {
+            var sql = string.Format("ALTER TABLE {0}.{1} DROP COLUMN [{2}]", SchemaName, tableName, columnName);
+            if (checkIfColumnExistsFirst) sql = "IF EXISTS(SELECT * FROM sys.columns WHERE Name = N'{2}' AND Object_ID = Object_ID(N'{1}')) " + sql;
+            RunSql(sql);
         }
 
         public bool AddColumn(string tablename, Column column, int dataUpdateTimeout=-1)
@@ -346,7 +356,8 @@ namespace NSchemer
             }
             GC.SuppressFinalize(this);
         }
-        private SqlCommand NewCommand(string SqlString)
+
+        protected SqlCommand NewCommand(string SqlString)
         {
             SqlCommand newCommand;
             if (CurrentTransaction == null)
