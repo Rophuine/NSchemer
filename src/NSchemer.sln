@@ -1,11 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.30723.0
+VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NSchemer", "NSchemer\NSchemer.csproj", "{FE509E94-252A-43BE-B649-A4E6643E66ED}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NSchemer.Interfaces", "NSchemer.Interfaces\NSchemer.Interfaces.csproj", "{A4F97472-0284-4FA3-866D-3D67E78968B3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NSchemer.Tests", "NSchemer.Tests\NSchemer.Tests.csproj", "{30BE696B-2732-4404-ADC1-D2F457F3C451}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{A4F97472-0284-4FA3-866D-3D67E78968B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A4F97472-0284-4FA3-866D-3D67E78968B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A4F97472-0284-4FA3-866D-3D67E78968B3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{30BE696B-2732-4404-ADC1-D2F457F3C451}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{30BE696B-2732-4404-ADC1-D2F457F3C451}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{30BE696B-2732-4404-ADC1-D2F457F3C451}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{30BE696B-2732-4404-ADC1-D2F457F3C451}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

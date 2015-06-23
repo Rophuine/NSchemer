@@ -428,7 +428,7 @@ namespace NSchemer
         /// <param name="SqlString"></param>
         /// <param name="timeOut">The number of seconds to wait when executing the command (0 = indefinate)</param>
         /// <returns>Number of rows affected</returns>
-        public int RunSql(string SqlString, int timeOut)
+        public virtual int RunSql(string SqlString, int timeOut)
         {
             IDbCommand comm = NewCommand(SqlString);
             if (timeOut > -1)
@@ -440,7 +440,7 @@ namespace NSchemer
         /// <summary>
         /// Runs a SQL command, returns the number of rows affected
         /// </summary>
-        public int RunSql(string SqlString)
+        public virtual int RunSql(string SqlString)
         {
             return RunSql(SqlString, -1);
         }

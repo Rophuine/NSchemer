@@ -1,7 +1,9 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Resources;
+using System.Text.RegularExpressions;
 
 namespace NSchemer
 {
@@ -35,10 +37,12 @@ namespace NSchemer
 
         public static void RunMultistepSqlScript(string script, SqlClientDatabase sqlDatabase)
         {
-            string[] individualCommands =
-                string.Format(script, sqlDatabase.Catalog)
-                    .Split(new[] {Environment.NewLine + "GO" + Environment.NewLine},
-                        StringSplitOptions.RemoveEmptyEntries);
+            var individualCommands = Regex.Split(string.Format(script, sqlDatabase.Catalog), @"^\s*GO\s*$",
+                RegexOptions.Multiline)
+                .Where(cmd => !string.IsNullOrWhiteSpace(cmd))
+                .Select(cmd => cmd.Trim());
+
+
             foreach (string command in individualCommands)
             {
                 try
