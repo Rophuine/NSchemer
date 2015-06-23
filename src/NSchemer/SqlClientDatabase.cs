@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
@@ -12,9 +14,24 @@ namespace NSchemer
     public abstract class SqlClientDatabase : DatabaseBase, IDisposable, IVersionedDatabase
     {
         public string ConnectionString { get; set; }
-        protected SqlConnection Connection;
+        protected Lazy<IDbConnection> _connection;
+
+        protected Func<string, IDbConnection, IDbTransaction, IDbCommand> TransactionalCommandFactory 
+            = (sql, connection, transaction) => new SqlCommand(sql, connection as SqlConnection, transaction as SqlTransaction);
+        protected Func<string, IDbConnection, IDbCommand> CommandFactory
+            = (sql, connection) => new SqlCommand(sql, connection as SqlConnection);
+            
         SqlTransaction CurrentTransaction = null;
         public string SchemaName { get; set; }
+
+        protected string SchemaNameWithDotOrBlank
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(SchemaName)) return "";
+                return SchemaName + ".";
+            }
+        }
 
         /// <summary>
         /// DO NOT use this to check up-to-dateness. Use IsCurrent()
@@ -44,6 +61,11 @@ namespace NSchemer
                 var csb = new SqlConnectionStringBuilder(ConnectionString);
                 return csb.InitialCatalog;
             }
+        }
+
+        protected IDbConnection Connection
+        {
+            get { return _connection.Value; }
         }
 
         public enum DataType
@@ -142,11 +164,24 @@ namespace NSchemer
 
         public override bool AddRow(string tablename, string data)
         {
-            string sql = string.Format("INSERT INTO {0}.{1} VALUES ({2})", SchemaName, tablename, data);
+            string sql = string.Format("INSERT INTO {0}{1} VALUES ({2})", SchemaNameWithDotOrBlank, tablename, data);
             int rows = RunSql(sql);
             if (rows > 0) return true;
             return false;
         }
+
+        public bool AddRow(string tableName, string[] columns, string[] sqlFormattedData)
+        {
+            string sql = string.Format("INSERT INTO {0}{1} ({2}) VALUES ({3})",
+                SchemaNameWithDotOrBlank,
+                tableName,
+                string.Join(",", columns.Select(column => "[" + column + "]")),
+                string.Join(",", sqlFormattedData));
+            int rows = RunSql(sql);
+            if (rows > 0) return true;
+            return false;
+        }
+
         public void Update()
         {
             // This brings the current database up to date. Use with care! It should probably not be accessible to end users, but only from Admin tools.
@@ -177,6 +212,7 @@ namespace NSchemer
 
         private bool RunUpdate(ITransition transition)
         {
+            if (transition.VersionNumber <= 0) throw new Exception("NSchemer expects all version numbers to be greater than zero.");
             var result = transition.Up(this);
             if (result)
             {
@@ -207,7 +243,7 @@ namespace NSchemer
         /// </summary>
         public void DeleteColumn(string tableName, string columnName, bool checkIfColumnExistsFirst = true)
         {
-            var sql = string.Format("ALTER TABLE {0}.{1} DROP COLUMN [{2}]", SchemaName, tableName, columnName);
+            var sql = string.Format("ALTER TABLE {0}{1} DROP COLUMN [{2}]", SchemaNameWithDotOrBlank, tableName, columnName);
             if (checkIfColumnExistsFirst) sql = "IF EXISTS(SELECT * FROM sys.columns WHERE Name = N'{2}' AND Object_ID = Object_ID(N'{1}')) " + sql;
             RunSql(sql);
         }
@@ -216,16 +252,16 @@ namespace NSchemer
         {
             try
             {
-                string sql = string.Format("ALTER TABLE {0}.[{1}] ADD {2}", SchemaName, tablename, column.GetSQL(true));
+                string sql = string.Format("ALTER TABLE {0}[{1}] ADD {2}", SchemaNameWithDotOrBlank, tablename, column.GetSQL(true));
                 RunSql(sql);
                 if (column.defaultSqlData != null && column.defaultSqlData != "")
                 {
-                    sql = string.Format("UPDATE {0}.[{1}] SET {2}={3}", SchemaName, tablename, column.name, column.defaultSqlData);
+                    sql = string.Format("UPDATE {0}[{1}] SET {2}={3}", SchemaNameWithDotOrBlank, tablename, column.name, column.defaultSqlData);
                     RunSql(sql, dataUpdateTimeout);
                 }
                 if (column.nullable == false)
                 {
-                    sql = string.Format("ALTER TABLE {0}.[{1}] ALTER COLUMN {2}", SchemaName, tablename, column.GetSQL());
+                    sql = string.Format("ALTER TABLE {0}[{1}] ALTER COLUMN {2}", SchemaNameWithDotOrBlank, tablename, column.GetSQL());
                     RunSql(sql);
                 }
             }
@@ -240,7 +276,7 @@ namespace NSchemer
         {
             if (!TableExists(TableName))
             {
-                string sql = string.Format("CREATE TABLE {0}.{1} (", SchemaName, TableName);
+                string sql = string.Format("CREATE TABLE {0}{1} (", SchemaNameWithDotOrBlank, TableName);
                 bool first = true;
                 foreach (Column c in cols)
                 {
@@ -264,7 +300,7 @@ namespace NSchemer
         }
         public void RenameField(string TableName, string CurrentName, string NewName)
         {
-            string sql = string.Format("exec sp_rename '{0}.{1}.{2}', '{3}'", SchemaName, TableName, CurrentName, NewName);
+            string sql = string.Format("exec sp_rename '{0}{1}.{2}', '{3}'", SchemaNameWithDotOrBlank, TableName, CurrentName, NewName);
             RunSql(sql);
         }
         public void ChangeDatatype(string TableName, string Column, DataType newtype)
@@ -289,7 +325,7 @@ namespace NSchemer
             {
                 datatypeString = datatypeString.Replace("(size)", string.Format("({0})", size.ToString()));
             }
-            string sql = string.Format("ALTER TABLE {0}.{1} ALTER COLUMN [{2}] {3}", SchemaName, TableName, Column, datatypeString);
+            string sql = string.Format("ALTER TABLE {0}{1} ALTER COLUMN [{2}] {3}", SchemaNameWithDotOrBlank, TableName, Column, datatypeString);
             RunSql(sql);
         }
 
@@ -313,7 +349,7 @@ namespace NSchemer
             {
                 List<double> versionList = new List<double>();
 
-                string sql = string.Format("SELECT VERSIONNUMBER FROM {0}.{1}", SchemaName, VersionTable);
+                string sql = string.Format("SELECT VERSIONNUMBER FROM {0}{1}", SchemaNameWithDotOrBlank, VersionTable);
                 using (SqlDataReader dr = RunQuery(sql))
                 {
                     while (dr.Read())
@@ -329,7 +365,7 @@ namespace NSchemer
                     new Column("VERSIONNUMBER", DataType.FLOAT),
                     new Column("DATEAPPLIED", DataType.DATETIME)
                 });
-                string sql = string.Format("INSERT INTO {0}.{1} (VERSIONNUMBER, DATEAPPLIED) VALUES (0, GetDate())", SchemaName, VersionTable);
+                string sql = string.Format("INSERT INTO {0}{1} (VERSIONNUMBER, DATEAPPLIED) VALUES (0, GetDate())", SchemaNameWithDotOrBlank, VersionTable);
                 RunSql(sql);
                 return new List<double>() { 0 };
             }
@@ -343,9 +379,24 @@ namespace NSchemer
             SchemaName = schemaName;
             var csb = new SqlConnectionStringBuilder(connectionString) {MultipleActiveResultSets = true};
             ConnectionString = csb.ToString();
-            Connection = new SqlConnection(ConnectionString);
-            Connection.Open();
+            _connection = new Lazy<IDbConnection>(() =>
+            {
+                var conn = new SqlConnection(ConnectionString);
+                conn.Open();
+                return conn;
+            });
         }
+
+        public SqlClientDatabase(Func<IDbConnection> connectionProvider)
+        {
+            _connection = new Lazy<IDbConnection>(() =>
+            {
+                var conn = connectionProvider();
+                if (conn.State != ConnectionState.Open) conn.Open();
+                return conn;
+            });
+        }
+
         public void Dispose()
         {
             //close and dispose in dispose rather than the finalizer http://msdn.microsoft.com/en-us/library/system.data.sqlclient.sqldatareader.close.aspx
@@ -357,16 +408,16 @@ namespace NSchemer
             GC.SuppressFinalize(this);
         }
 
-        protected SqlCommand NewCommand(string SqlString)
+        protected IDbCommand NewCommand(string SqlString)
         {
-            SqlCommand newCommand;
+            IDbCommand newCommand;
             if (CurrentTransaction == null)
             {
-                newCommand = new SqlCommand(SqlString, Connection);
+                newCommand = CommandFactory(SqlString, Connection);
             }
             else
             {
-                newCommand = new SqlCommand(SqlString, Connection, CurrentTransaction);
+                newCommand = TransactionalCommandFactory(SqlString, Connection, CurrentTransaction);
             }
             newCommand.CommandType = System.Data.CommandType.Text;
             return newCommand;
@@ -379,7 +430,7 @@ namespace NSchemer
         /// <returns>Number of rows affected</returns>
         public int RunSql(string SqlString, int timeOut)
         {
-            SqlCommand comm = NewCommand(SqlString);
+            IDbCommand comm = NewCommand(SqlString);
             if (timeOut > -1)
                 comm.CommandTimeout = timeOut;
 
@@ -394,14 +445,14 @@ namespace NSchemer
             return RunSql(SqlString, -1);
         }
 
-        private bool TableExists(string TableName)
+        protected bool TableExists(string TableName)
         {
-            string checkTable = String.Format("IF OBJECT_ID('{0}.{1}', 'U') IS NOT NULL SELECT 'true' ELSE SELECT 'false'", SchemaName, TableName);
+            string checkTable = String.Format("IF OBJECT_ID('{0}{1}', 'U') IS NOT NULL SELECT 'true' ELSE SELECT 'false'", SchemaNameWithDotOrBlank, TableName);
             return Convert.ToBoolean(RunScalar(checkTable));
         }
         protected object RunScalar(string Sql)
         {
-            SqlCommand command = new SqlCommand(Sql, Connection);
+            IDbCommand command = CommandFactory(Sql, Connection);
             command.CommandType = System.Data.CommandType.Text;
             return command.ExecuteScalar();
         }

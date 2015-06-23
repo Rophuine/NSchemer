@@ -7,10 +7,13 @@ namespace NSchemer
 {
     public class SqlScriptTransition : ITransition
     {
+        public SqlScriptTransition(double versionNumber, string name, string description, string embeddedResourceName) 
+            : this(versionNumber, name, description, null, embeddedResourceName) { }
+
         public SqlScriptTransition(double versionNumber, string name, string description, Assembly sourceAssembly,
             string embeddedResourceName)
         {
-            SourceAssembly = sourceAssembly;
+            SourceAssembly = sourceAssembly ?? GetType().Assembly;
             EmbeddedResourceName = embeddedResourceName;
             Description = description;
             Name = name;
@@ -22,10 +25,16 @@ namespace NSchemer
 
         public bool Up(DatabaseBase database)
         {
-            string script = ReadResourceFile(SourceAssembly, EmbeddedResourceName);
+            string script = ReadSqlFile(SourceAssembly, EmbeddedResourceName);
             var sqlDatabase = database as SqlClientDatabase;
             if (sqlDatabase == null)
                 throw new InvalidOperationException("Tried to run a SQL script on a non-SQL database.");
+            RunMultistepSqlScript(script, sqlDatabase);
+            return true;
+        }
+
+        public static void RunMultistepSqlScript(string script, SqlClientDatabase sqlDatabase)
+        {
             string[] individualCommands =
                 string.Format(script, sqlDatabase.Catalog)
                     .Split(new[] {Environment.NewLine + "GO" + Environment.NewLine},
@@ -41,14 +50,13 @@ namespace NSchemer
                     throw new Exception(string.Format("Failed to execute {0}", command), ex);
                 }
             }
-            return true;
         }
 
         public string Name { get; private set; }
         public string Description { get; private set; }
         public double VersionNumber { get; private set; }
 
-        private string ReadResourceFile(Assembly assembly, string resourceName)
+        public static string ReadSqlFile(Assembly assembly, string resourceName)
         {
             using (Stream stream = assembly.GetManifestResourceStream(resourceName))
             {
