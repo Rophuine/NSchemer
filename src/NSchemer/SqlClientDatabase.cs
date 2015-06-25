@@ -185,7 +185,7 @@ namespace NSchemer
         public void Update()
         {
             // This brings the current database up to date. Use with care! It should probably not be accessible to end users, but only from Admin tools.
-            bool AppliedUpdate = true;
+            bool appliedUpdate = true;
 
             // first apply all updates that are missing from this database's list of versions
             List<ITransition> missingUpdates = new List<ITransition>();
@@ -199,13 +199,14 @@ namespace NSchemer
                 RunUpdate(v);
 
             // now update the remaining 
-            while (!IsCurrent( ) && AppliedUpdate)
-                foreach (ITransition v in Versions)
+            while (!IsCurrent() && appliedUpdate)
+                // With the below orderby, there's now no point in doing these in two separate passes - but I want some more tests before I make that change
+                foreach (ITransition v in Versions.OrderBy(v => v.VersionNumber))
                 {
                     if (v.VersionNumber > DatabaseVersion)
                     {
-                        AppliedUpdate = RunUpdate(v);
-                        if (!AppliedUpdate) throw new Exception(string.Format("Version number {0} reported an error applying the update.", v.VersionNumber));
+                        appliedUpdate = RunUpdate(v);
+                        if (!appliedUpdate) throw new Exception(string.Format("Version number {0} reported an error applying the update.", v.VersionNumber));
                     }
                 }
         }

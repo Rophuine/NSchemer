@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace NSchemer
 {
@@ -15,7 +16,7 @@ namespace NSchemer
         {
             get
             {
-                return Versions[Versions.Count - 1].VersionNumber;
+                return Versions.Max(v => v.VersionNumber);
             }
         }
 
