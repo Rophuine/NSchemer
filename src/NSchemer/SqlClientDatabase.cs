@@ -150,7 +150,7 @@ namespace NSchemer
             public Column(string name, DataType dataType, bool nullable, string defaultSqlData) : this(name, dataType, 0, nullable, defaultSqlData) { }
         }
 
-        public bool IsCurrent()
+        public virtual bool IsCurrent()
         {
             List<ITransition> missingUpdates = new List<ITransition>();
             var allVersions = ReadAllAppliedVersions();
@@ -196,7 +196,7 @@ namespace NSchemer
             }
             missingUpdates.Sort((x, y) => x.VersionNumber.CompareTo(y.VersionNumber));
             foreach (ITransition v in missingUpdates)
-                RunUpdate(v);
+                if (!RunUpdate(v)) throw new Exception(string.Format("Version number {0} reported an error applying the update.", v.VersionNumber));
 
             // now update the remaining 
             while (!IsCurrent() && appliedUpdate)
@@ -211,7 +211,7 @@ namespace NSchemer
                 }
         }
 
-        private bool RunUpdate(ITransition transition)
+        protected virtual bool RunUpdate(ITransition transition)
         {
             if (transition.VersionNumber <= 0) throw new Exception("NSchemer expects all version numbers to be greater than zero.");
             var result = transition.Up(this);
@@ -343,7 +343,7 @@ namespace NSchemer
         /// either from the initial scripting or through applying updates
         /// </summary>
         /// <returns></returns>
-        private List<double> ReadAllAppliedVersions()
+        protected virtual List<double> ReadAllAppliedVersions()
         {
 
             if (TableExists(VersionTable))
