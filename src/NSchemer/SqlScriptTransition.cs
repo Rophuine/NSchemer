@@ -3,14 +3,16 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Resources;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
 namespace NSchemer
 {
     public class SqlScriptTransition : ITransition
     {
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public SqlScriptTransition(double versionNumber, string name, string description, string embeddedResourceName) 
-            : this(versionNumber, name, description, null, embeddedResourceName) { }
+            : this(versionNumber, name, description, Assembly.GetCallingAssembly(), embeddedResourceName) { }
 
         public SqlScriptTransition(double versionNumber, string name, string description, Assembly sourceAssembly,
             string embeddedResourceName)
