@@ -14,10 +14,11 @@ namespace NSchemer
         public SqlScriptTransition(double versionNumber, string name, string description, string embeddedResourceName) 
             : this(versionNumber, name, description, Assembly.GetCallingAssembly(), embeddedResourceName) { }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public SqlScriptTransition(double versionNumber, string name, string description, Assembly sourceAssembly,
             string embeddedResourceName)
         {
-            SourceAssembly = sourceAssembly ?? GetType().Assembly;
+            SourceAssembly = sourceAssembly ?? Assembly.GetCallingAssembly();
             EmbeddedResourceName = embeddedResourceName;
             Description = description;
             Name = name;
