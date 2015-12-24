@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
@@ -13,6 +12,8 @@ namespace NSchemer
 {
     public abstract class SqlClientDatabase : DatabaseBase, IDisposable, IVersionedDatabase
     {
+        public const int DbDefaultCommandTimeout = -1;
+
         public string ConnectionString { get; set; }
         protected Lazy<IDbConnection> _connection;
 
@@ -249,7 +250,7 @@ namespace NSchemer
             RunSql(sql);
         }
 
-        public bool AddColumn(string tablename, Column column, int dataUpdateTimeout=-1)
+        public bool AddColumn(string tablename, Column column, int dataUpdateTimeout = DbDefaultCommandTimeout)
         {
             try
             {
@@ -432,7 +433,7 @@ namespace NSchemer
         public virtual int RunSql(string SqlString, int timeOut)
         {
             IDbCommand comm = NewCommand(SqlString);
-            if (timeOut > -1)
+            if (timeOut > DbDefaultCommandTimeout)
                 comm.CommandTimeout = timeOut;
 
             return comm.ExecuteNonQuery();
@@ -443,7 +444,7 @@ namespace NSchemer
         /// </summary>
         public virtual int RunSql(string SqlString)
         {
-            return RunSql(SqlString, -1);
+            return RunSql(SqlString, DbDefaultCommandTimeout);
         }
 
         protected bool TableExists(string TableName)

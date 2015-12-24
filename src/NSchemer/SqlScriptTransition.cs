@@ -15,18 +15,19 @@ namespace NSchemer
             : this(versionNumber, name, description, Assembly.GetCallingAssembly(), embeddedResourceName) { }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public SqlScriptTransition(double versionNumber, string name, string description, Assembly sourceAssembly,
-            string embeddedResourceName)
+        public SqlScriptTransition(double versionNumber, string name, string description, Assembly sourceAssembly, string embeddedResourceName, int timeout = SqlClientDatabase.DbDefaultCommandTimeout)
         {
             SourceAssembly = sourceAssembly ?? Assembly.GetCallingAssembly();
             EmbeddedResourceName = embeddedResourceName;
             Description = description;
             Name = name;
             VersionNumber = versionNumber;
+            Timeout = timeout;
         }
 
         public Assembly SourceAssembly { get; private set; }
         public string EmbeddedResourceName { get; private set; }
+        public int Timeout { get; set; }
 
         public bool Up(DatabaseBase database)
         {
@@ -34,11 +35,11 @@ namespace NSchemer
             var sqlDatabase = database as SqlClientDatabase;
             if (sqlDatabase == null)
                 throw new InvalidOperationException("Tried to run a SQL script on a non-SQL database.");
-            RunMultistepSqlScript(script, sqlDatabase);
+            RunMultistepSqlScript(script, sqlDatabase, Timeout);
             return true;
         }
 
-        public static void RunMultistepSqlScript(string script, SqlClientDatabase sqlDatabase)
+        public static void RunMultistepSqlScript(string script, SqlClientDatabase sqlDatabase, int timeout = SqlClientDatabase.DbDefaultCommandTimeout)
         {
             var individualCommands = Regex.Split(string.Format(script, sqlDatabase.Catalog), @"^\s*GO\s*$",
                 RegexOptions.Multiline)
@@ -50,7 +51,7 @@ namespace NSchemer
             {
                 try
                 {
-                    sqlDatabase.RunSql(command);
+                    sqlDatabase.RunSql(command, timeout);
                 }
                 catch (Exception ex)
                 {
