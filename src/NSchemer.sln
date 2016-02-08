@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NSchemer.Interfaces", "NSch
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NSchemer.Tests", "NSchemer.Tests\NSchemer.Tests.csproj", "{30BE696B-2732-4404-ADC1-D2F457F3C451}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NSchemer.SystemTests", "NSchemer.SystemTests\NSchemer.SystemTests.csproj", "{D4FAF38D-E26E-4FBC-A2C5-B428575E5856}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{30BE696B-2732-4404-ADC1-D2F457F3C451}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{30BE696B-2732-4404-ADC1-D2F457F3C451}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{30BE696B-2732-4404-ADC1-D2F457F3C451}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D4FAF38D-E26E-4FBC-A2C5-B428575E5856}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D4FAF38D-E26E-4FBC-A2C5-B428575E5856}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D4FAF38D-E26E-4FBC-A2C5-B428575E5856}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D4FAF38D-E26E-4FBC-A2C5-B428575E5856}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

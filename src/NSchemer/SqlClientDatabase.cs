@@ -165,13 +165,18 @@ namespace NSchemer
 
         public override bool AddRow(string tablename, string data)
         {
-            string sql = string.Format("INSERT INTO {0}{1} VALUES ({2})", SchemaNameWithDotOrBlank, tablename, data);
-            int rows = RunSql(sql);
-            if (rows > 0) return true;
-            return false;
+            return AddRow(tablename, data, false);
         }
 
-        public bool AddRow(string tableName, string[] columns, string[] sqlFormattedData)
+        public bool AddRow(string tablename, string data, bool checkInsertCount)
+        {
+            string sql = string.Format("INSERT INTO {0}{1} VALUES ({2})", SchemaNameWithDotOrBlank, tablename, data);
+            int rows = RunSql(sql);
+            if (checkInsertCount && (rows == 0 || rows > 1)) return false;
+            return true;            
+        }
+
+        public bool AddRow(string tableName, string[] columns, string[] sqlFormattedData, bool checkInsertCount = false)
         {
             string sql = string.Format("INSERT INTO {0}{1} ({2}) VALUES ({3})",
                 SchemaNameWithDotOrBlank,
@@ -179,8 +184,8 @@ namespace NSchemer
                 string.Join(",", columns.Select(column => "[" + column + "]")),
                 string.Join(",", sqlFormattedData));
             int rows = RunSql(sql);
-            if (rows > 0) return true;
-            return false;
+            if (checkInsertCount && (rows == 0 || rows > 1)) return false;
+            return true;
         }
 
         public void Update()
