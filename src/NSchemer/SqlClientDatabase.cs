@@ -89,12 +89,14 @@ namespace NSchemer
             TINYINT,
             [Description("float")]
             FLOAT,
-            [Description("varbinary(max)")]
+            [Description("varbinary(max)")] // this should be varbinary!
             BINARY,
             [Description("smallint")]
             SMALLINT,
             [Description("bigint")]
-            BIGINT
+            BIGINT,
+            [Description("binary(size)")] // this is probably what binary should be!
+            SHORTBINARY
         }
         public class Column
         {
@@ -107,31 +109,36 @@ namespace NSchemer
             public virtual string GetSQL(bool forceNullable = false)
             {
                 // Gives the DDL to generate this row
-                    string datatypeString = null;
-                    // This retrieves the datatype string from the enum markup above into datatypeString
-                    MemberInfo[] memberInfo = typeof(DataType).GetMember(dataType.ToString());
-                    if (memberInfo != null && memberInfo.Length > 0)
+                string datatypeString = null;
+                // This retrieves the datatype string from the enum markup above into datatypeString
+                MemberInfo[] memberInfo = typeof(DataType).GetMember(dataType.ToString());
+                if (memberInfo != null && memberInfo.Length > 0)
+                {
+                    object[] attrs = memberInfo[0].GetCustomAttributes(typeof(DescriptionAttribute), false);
+                    if (attrs != null && attrs.Length > 0)
                     {
-                        object[] attrs = memberInfo[0].GetCustomAttributes(typeof(DescriptionAttribute), false);
-                        if (attrs != null && attrs.Length > 0)
-                        {
-                            datatypeString = ((DescriptionAttribute)attrs[0]).Description;
-                        }
+                        datatypeString = ((DescriptionAttribute)attrs[0]).Description;
                     }
-                    if (datatypeString == null)
-                        throw new Exception(string.Format("Cannot determine correct datatype string while creating field {0}.", name));
-                    string result = string.Format("[{0}] {1}", name, datatypeString);
-                    if (result.Contains("(size)"))
-                    {
-                        result = result.Replace("(size)", string.Format("({0})", length.ToString()));
-                    }
-                if (nullable || forceNullable)
-                        result += " NULL";
-                    else
-                        result += " NOT NULL";
-
-                    return result;
                 }
+                if (datatypeString == null)
+                    throw new Exception(string.Format("Cannot determine correct datatype string while creating field {0}.", name));
+                string result = string.Format("[{0}] {1}", name, datatypeString);
+                if (result.Contains("(size)"))
+                {
+                    result = result.Replace("(size)", string.Format("({0})", length.ToString()));
+                }
+                if (nullable || forceNullable)
+                    result += " NULL";
+                else
+                    result += " NOT NULL";
+
+                if (_seed.HasValue)
+                {
+                    result += $" IDENTITY({_seed},{_increment})";
+                }
+
+                return result;
+            }
             public Column(string name, DataType dataType)
                 : this(name, dataType, 0)
             { }
@@ -149,6 +156,32 @@ namespace NSchemer
                 this.defaultSqlData = defaultSqlData;
             }
             public Column(string name, DataType dataType, bool nullable, string defaultSqlData) : this(name, dataType, 0, nullable, defaultSqlData) { }
+
+            private int? _seed;
+            private int? _increment;
+            public Column Identity(int seed, int increment)
+            {
+                nullable = false;
+                _seed = seed;
+                _increment = increment;
+                return this;
+            }
+
+            public bool PrimaryKey { get; private set; }
+
+            public Column AsPrimaryKey()
+            {
+                PrimaryKey = true;
+                nullable = false;
+                return this;
+            }
+
+            public Column NotNull(string defaultSqlData = null)
+            {
+                nullable = false;
+                if (defaultSqlData != null) this.defaultSqlData = defaultSqlData;
+                return this;
+            }
         }
 
         public virtual bool IsCurrent()
@@ -257,6 +290,7 @@ namespace NSchemer
 
         public bool AddColumn(string tablename, Column column, int dataUpdateTimeout = DbDefaultCommandTimeout)
         {
+            if (column.PrimaryKey) throw new NotSupportedException("NSchemer doesn't currently support adding a primary key column to an existing table via a CodeTransition.");
             try
             {
                 string sql = string.Format("ALTER TABLE {0}[{1}] ADD {2}", SchemaNameWithDotOrBlank, tablename, column.GetSQL(true));
@@ -281,23 +315,10 @@ namespace NSchemer
         }
         public void CreateTable(string TableName, List<Column> cols)
         {
+            if (!TableName.Contains("[")) TableName = $"[{TableName}]";
             if (!TableExists(TableName))
             {
-                string sql = string.Format("CREATE TABLE {0}{1} (", SchemaNameWithDotOrBlank, TableName);
-                bool first = true;
-                foreach (Column c in cols)
-                {
-                    if (first)
-                    {
-                        first = false;
-                    }
-                    else
-                    {
-                        sql += ", ";
-                    }
-                    sql += c.GetSQL();
-                }
-                sql += ")";
+                var sql = CreateTableSql(TableName, cols);
                 RunSql(sql);
             }
             else
@@ -305,6 +326,32 @@ namespace NSchemer
                 throw new Exception(string.Format("Table {0} already exists, unable to create it.", TableName));
             }
         }
+
+        public string CreateTableSql(string TableName, List<Column> cols)
+        {
+            string sql = string.Format("CREATE TABLE {0}{1} (", SchemaNameWithDotOrBlank, TableName);
+            bool first = true;
+            foreach (Column c in cols)
+            {
+                if (first)
+                {
+                    first = false;
+                }
+                else
+                {
+                    sql += ", ";
+                }
+                sql += c.GetSQL();
+            }
+
+            var primaryKey = cols.Where(c => c.PrimaryKey).Select(c => $"[{c.name}]").ToList();
+            if (primaryKey.Any())
+                sql += $", CONSTRAINT PK_{TableName.Replace("[", "").Replace("]", "")} PRIMARY KEY CLUSTERED ({string.Join(",", primaryKey)})";
+
+            sql += ")";
+            return sql;
+        }
+
         public void RenameField(string TableName, string CurrentName, string NewName)
         {
             string sql = string.Format("exec sp_rename '{0}{1}.{2}', '{3}'", SchemaNameWithDotOrBlank, TableName, CurrentName, NewName);
@@ -433,7 +480,7 @@ namespace NSchemer
         /// Run a SQL command with provision for setting a timeout value
         /// </summary>
         /// <param name="SqlString"></param>
-        /// <param name="timeOut">The number of seconds to wait when executing the command (0 = indefinate)</param>
+        /// <param name="timeOut">The number of seconds to wait when executing the command (0 = indefinite)</param>
         /// <returns>Number of rows affected</returns>
         public virtual int RunSql(string SqlString, int timeOut)
         {
