@@ -56,6 +56,11 @@ namespace NSchemer.Sql
             this.nullable = true;
         }
 
+        public Column(string name, DataType dataType, bool nullable)
+            : this(name, dataType, 0, nullable)
+        {
+        }
+
         public Column(string name, DataType dataType, int length, bool nullable)
             : this(name, dataType, length, nullable, null)
         {}
