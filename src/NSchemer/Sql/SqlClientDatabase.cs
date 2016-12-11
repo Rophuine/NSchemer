@@ -251,7 +251,7 @@ namespace NSchemer.Sql
             if (primaryKey.Any())
                 sql += $", CONSTRAINT PK_{TableName.StripSquareBrackets()} PRIMARY KEY CLUSTERED ({string.Join(",", primaryKey)})";
 
-            var foreignKeysSql = string.Join(",", columns.Where(c => c.ForeignKeyName != null)
+            var foreignKeysSql = string.Join(",", columns.Where(c => c.IsForeignKey)
                     .Select(c => GetForeignKeySql(c, TableName)));
 
             if (!string.IsNullOrWhiteSpace(foreignKeysSql)) sql += $",{foreignKeysSql}";
@@ -263,7 +263,7 @@ namespace NSchemer.Sql
         private string GetForeignKeySql(Column col, string tableName)
         {
             var keyName = col.ForeignKeyName ??
-                          $"FK_{tableName.StripSquareBrackets()}-{col.name}_{col.ForeignKeyTable}-{col.ForeignKeyColumn}";
+                          $"FK_{tableName.StripSquareBrackets()}_{col.name}_{col.ForeignKeyTable}_{col.ForeignKeyColumn}";
             return $"CONSTRAINT {keyName} FOREIGN KEY ([{col.name}]) " +
                    $"REFERENCES {SchemaNameWithDotOrBlank}[{col.ForeignKeyTable}] ({col.ForeignKeyColumn})" +
                    (col.CascadeOnDelete
@@ -399,6 +399,7 @@ namespace NSchemer.Sql
             newCommand.CommandType = System.Data.CommandType.Text;
             return newCommand;
         }
+
         /// <summary>
         /// Run a SQL command with provision for setting a timeout value
         /// </summary>
