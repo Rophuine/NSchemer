@@ -194,7 +194,7 @@ namespace NSchemer.Sql
                 }
                 if (column.IsForeignKey)
                 {
-                    RunSql($"ALTER TABLE {SchemaNameWithDotOrBlank}.[{tablename}] ADD {GetForeignKeySql(column)}");
+                    RunSql($"ALTER TABLE {SchemaNameWithDotOrBlank}.[{tablename}] ADD {GetForeignKeySql(column, tablename)}");
                 }
             }
             catch (SqlException ex)
