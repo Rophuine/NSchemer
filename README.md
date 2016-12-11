@@ -5,7 +5,7 @@ NSchemer [![Build status](https://ci.appveyor.com/api/projects/status/f68iuxk6mo
 
 # Why?
 
-If you're not managing your schema automatically, you're doing it wrong. In dev environments, automatically update the schema on project launch. In production environments, update it during your automated deployment process.
+If you're not managing your schema automatically, you're doing it wrong. In dev environments, automatically update the schema on project launch. In all other environments (test, UAT, production), update it during your automated deployment process.
 
 There are plenty of options out there. NSchemer gives you options, while being simple and light-weight. Microsoft SQL Server is the target platform - it's entirely possible it will work on other database platforms as well. If it doesn't and you want it to, I'm open to pull requests!
 
