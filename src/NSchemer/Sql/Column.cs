@@ -111,5 +111,11 @@ namespace NSchemer.Sql
             CascadeOnUpdate = cascadeOnUpdate;
             return this;
         }
+
+        public Column AsForeignKey(string table, string column, bool cascadeOnDelete = false,
+            bool cascadeOnUpdate = false)
+        {
+            return AsForeignKey(null, table, column, cascadeOnDelete, cascadeOnUpdate);
+        }
     }
 }

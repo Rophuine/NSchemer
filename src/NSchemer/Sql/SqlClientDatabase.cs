@@ -252,7 +252,7 @@ namespace NSchemer.Sql
                 sql += $", CONSTRAINT PK_{TableName.StripSquareBrackets()} PRIMARY KEY CLUSTERED ({string.Join(",", primaryKey)})";
 
             var foreignKeysSql = string.Join(",", columns.Where(c => c.ForeignKeyName != null)
-                    .Select(GetForeignKeySql));
+                    .Select(c => GetForeignKeySql(c, TableName)));
 
             if (!string.IsNullOrWhiteSpace(foreignKeysSql)) sql += $",{foreignKeysSql}";
 
@@ -260,9 +260,11 @@ namespace NSchemer.Sql
             return sql;
         }
 
-        private string GetForeignKeySql(Column col)
+        private string GetForeignKeySql(Column col, string tableName)
         {
-            return $"CONSTRAINT {col.ForeignKeyName} FOREIGN KEY ([{col.name}]) " +
+            var keyName = col.ForeignKeyName ??
+                          $"FK_{tableName.StripSquareBrackets()}-{col.name}_{col.ForeignKeyTable}-{col.ForeignKeyColumn}";
+            return $"CONSTRAINT {keyName} FOREIGN KEY ([{col.name}]) " +
                    $"REFERENCES {SchemaNameWithDotOrBlank}[{col.ForeignKeyTable}] ({col.ForeignKeyColumn})" +
                    (col.CascadeOnDelete
                         ? " ON DELETE CASCADE"
