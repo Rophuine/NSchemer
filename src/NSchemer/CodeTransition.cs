@@ -4,6 +4,11 @@
     {
         public VersionUpdateHandler DoActualUpgrade;
 
+        public CodeTransition(double verionNumber, string name, VersionUpdateHandler upHandler)
+            : this(verionNumber, name, null, upHandler)
+        {
+        }
+
         public CodeTransition(double versionNumber, string name, string description, VersionUpdateHandler upHandler)
         {
             Name = name;
@@ -19,7 +24,7 @@
         public bool Up(DatabaseBase database)
         {
             // Do the update, if it returns true, add the version entry in the database
-            bool result = DoActualUpgrade();
+            var result = DoActualUpgrade();
 
             return result;
         }
