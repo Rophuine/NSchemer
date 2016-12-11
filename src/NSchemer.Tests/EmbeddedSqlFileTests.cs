@@ -1,4 +1,5 @@
 ﻿using Moq;
+using NSchemer.Sql;
 using NUnit.Framework;
 
 namespace NSchemer.Tests

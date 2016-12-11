@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using NSchemer.Sql;
 using NUnit.Framework;
 using Shouldly;
 
@@ -9,7 +10,7 @@ namespace NSchemer.Tests
         [Test]
         public void IdentityGeneratesCorrectSql()
         {
-            var column = new SqlClientDatabase.Column("itemId", SqlClientDatabase.DataType.BIGINT).Identity(1, 1);
+            var column = new Column("itemId", DataType.BIGINT).Identity(1, 1);
 
             var sql = column.GetSQL();
 
@@ -19,9 +20,9 @@ namespace NSchemer.Tests
         [Test]
         public void PrimaryKeyGeneratesCorrectSql()
         {
-            var column = new SqlClientDatabase.Column("itemId", SqlClientDatabase.DataType.GUID).AsPrimaryKey();
+            var column = new Column("itemId", DataType.GUID).AsPrimaryKey();
 
-            var sql = new ColumnTestDatabase("").CreateTableSql("item", new List<SqlClientDatabase.Column> {column});
+            var sql = new ColumnTestDatabase("").CreateTableSql("item", new List<Column> {column});
 
             sql.ShouldBe("CREATE TABLE dbo.item ([itemId] uniqueidentifier NOT NULL, CONSTRAINT PK_item PRIMARY KEY CLUSTERED ([itemId]))");
         }

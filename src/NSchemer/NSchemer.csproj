@@ -43,8 +43,10 @@
     <Compile Include="DatabaseBase.cs" />
     <Compile Include="ITransition.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SqlClientDatabase.cs" />
-    <Compile Include="SqlScriptTransition.cs" />
+    <Compile Include="Sql\Column.cs" />
+    <Compile Include="Sql\DataType.cs" />
+    <Compile Include="Sql\SqlClientDatabase.cs" />
+    <Compile Include="Sql\SqlScriptTransition.cs" />
     <Compile Include="CodeTransition.cs" />
     <Compile Include="VersionUpdateHandler.cs" />
   </ItemGroup>
