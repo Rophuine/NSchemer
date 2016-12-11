@@ -199,7 +199,13 @@ namespace NSchemer.Sql
             }
             return true;
         }
-        public void CreateTable(string TableName, List<Column> cols)
+
+        public void CreateTable(string TableName, params Column[] cols)
+        {
+            CreateTable(TableName, cols);
+        }
+
+        public void CreateTable(string TableName, IEnumerable<Column> cols)
         {
             if (!TableName.Contains("[")) TableName = $"[{TableName}]";
             if (!TableExists(TableName))
@@ -213,11 +219,12 @@ namespace NSchemer.Sql
             }
         }
 
-        public string CreateTableSql(string TableName, List<Column> cols)
+        public string CreateTableSql(string TableName, IEnumerable<Column> cols)
         {
             string sql = string.Format("CREATE TABLE {0}{1} (", SchemaNameWithDotOrBlank, TableName);
             bool first = true;
-            foreach (Column c in cols)
+            var columns = cols as Column[] ?? cols.ToArray();
+            foreach (Column c in columns)
             {
                 if (first)
                 {
@@ -230,7 +237,7 @@ namespace NSchemer.Sql
                 sql += c.GetSQL();
             }
 
-            var primaryKey = cols.Where(c => c.PrimaryKey).Select(c => $"[{c.name}]").ToList();
+            var primaryKey = columns.Where(c => c.PrimaryKey).Select(c => $"[{c.name}]").ToList();
             if (primaryKey.Any())
                 sql += $", CONSTRAINT PK_{TableName.Replace("[", "").Replace("]", "")} PRIMARY KEY CLUSTERED ({string.Join(",", primaryKey)})";
 
