@@ -1,4 +1,4 @@
-NSchemer
+NSchemer [![Build status](https://ci.appveyor.com/api/projects/status/f68iuxk6mosapale?svg=true)](https://ci.appveyor.com/project/Rophuine/nschemer)
 ========
 
 .Net-based database schema management
