@@ -93,5 +93,23 @@ namespace NSchemer.Sql
             if (defaultSqlData != null) this.defaultSqlData = defaultSqlData;
             return this;
         }
+
+        public bool IsForeignKey { get; private set; }
+        public string ForeignKeyName { get; private set; }
+        public string ForeignKeyTable { get; private set; }
+        public string ForeignKeyColumn { get; private set; }
+        public bool CascadeOnDelete { get; private set; }
+        public bool CascadeOnUpdate { get; private set; }
+        public Column AsForeignKey(string keyName, string table, string column,
+            bool cascadeOnDelete = false, bool cascadeOnUpdate = false)
+        {
+            IsForeignKey = true;
+            ForeignKeyName = keyName;
+            ForeignKeyTable = table;
+            ForeignKeyColumn = column;
+            CascadeOnDelete = cascadeOnDelete;
+            CascadeOnUpdate = cascadeOnUpdate;
+            return this;
+        }
     }
 }

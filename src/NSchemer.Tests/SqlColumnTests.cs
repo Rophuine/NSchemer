@@ -26,6 +26,17 @@ namespace NSchemer.Tests
 
             sql.ShouldBe("CREATE TABLE dbo.item ([itemId] uniqueidentifier NOT NULL, CONSTRAINT PK_item PRIMARY KEY CLUSTERED ([itemId]))");
         }
+
+        [Test]
+        public void PrimaryAndForeignKeyGeneratesCorrectSql()
+        {
+            var sql = new ColumnTestDatabase("").CreateTableSql("item",
+                new Column("itemId", DataType.BIGINT).AsPrimaryKey().AsForeignKey("FK_item", "item", "itemId"),
+                new Column("remoteId", DataType.GUID).AsForeignKey("FK_remote", "remote", "remoteId")
+            );
+
+            sql.ShouldBe("CREATE TABLE dbo.item ([itemId] bigint NOT NULL, [remoteId] uniqueidentifier NULL, CONSTRAINT PK_item PRIMARY KEY CLUSTERED ([itemId]),CONSTRAINT FK_item FOREIGN KEY ([itemId]) REFERENCES dbo.[item] (itemId),CONSTRAINT FK_remote FOREIGN KEY ([remoteId]) REFERENCES dbo.[remote] (remoteId))");
+        }
     }
 
     class ColumnTestDatabase : SqlClientDatabase

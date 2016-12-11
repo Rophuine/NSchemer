@@ -6,6 +6,7 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using NSchemer.ExtensionMethods;
 using NSchemer.Interfaces;
 
 namespace NSchemer.Sql
@@ -191,6 +192,10 @@ namespace NSchemer.Sql
                     sql = string.Format("ALTER TABLE {0}[{1}] ALTER COLUMN {2}", SchemaNameWithDotOrBlank, tablename, column.GetSQL());
                     RunSql(sql);
                 }
+                if (column.IsForeignKey)
+                {
+                    RunSql($"ALTER TABLE {SchemaNameWithDotOrBlank}.[{tablename}] ADD {GetForeignKeySql(column)}");
+                }
             }
             catch (SqlException ex)
             {
@@ -202,7 +207,7 @@ namespace NSchemer.Sql
 
         public void CreateTable(string TableName, params Column[] cols)
         {
-            CreateTable(TableName, cols);
+            CreateTable(TableName, cols as IEnumerable<Column>);
         }
 
         public void CreateTable(string TableName, IEnumerable<Column> cols)
@@ -219,7 +224,12 @@ namespace NSchemer.Sql
             }
         }
 
-        public string CreateTableSql(string TableName, IEnumerable<Column> cols)
+        internal string CreateTableSql(string tableName, params Column[] cols)
+        {
+            return CreateTableSql(tableName, cols as IEnumerable<Column>);
+        }
+
+        internal string CreateTableSql(string TableName, IEnumerable<Column> cols)
         {
             string sql = string.Format("CREATE TABLE {0}{1} (", SchemaNameWithDotOrBlank, TableName);
             bool first = true;
@@ -239,10 +249,28 @@ namespace NSchemer.Sql
 
             var primaryKey = columns.Where(c => c.PrimaryKey).Select(c => $"[{c.name}]").ToList();
             if (primaryKey.Any())
-                sql += $", CONSTRAINT PK_{TableName.Replace("[", "").Replace("]", "")} PRIMARY KEY CLUSTERED ({string.Join(",", primaryKey)})";
+                sql += $", CONSTRAINT PK_{TableName.StripSquareBrackets()} PRIMARY KEY CLUSTERED ({string.Join(",", primaryKey)})";
+
+            var foreignKeysSql = string.Join(",", columns.Where(c => c.ForeignKeyName != null)
+                    .Select(GetForeignKeySql));
+
+            if (!string.IsNullOrWhiteSpace(foreignKeysSql)) sql += $",{foreignKeysSql}";
 
             sql += ")";
             return sql;
+        }
+
+        private string GetForeignKeySql(Column col)
+        {
+            return $"CONSTRAINT {col.ForeignKeyName} FOREIGN KEY ([{col.name}]) " +
+                   $"REFERENCES {SchemaNameWithDotOrBlank}[{col.ForeignKeyTable}] ({col.ForeignKeyColumn})" +
+                   (col.CascadeOnDelete
+                        ? " ON DELETE CASCADE"
+                        : ""
+                   ) +
+                   (col.CascadeOnUpdate
+                        ? " ON UPDATE CASCADE"
+                        : "");
         }
 
         public void RenameField(string TableName, string CurrentName, string NewName)
