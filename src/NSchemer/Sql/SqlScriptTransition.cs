@@ -11,8 +11,18 @@ namespace NSchemer.Sql
     public class SqlScriptTransition : ITransition
     {
         [MethodImpl(MethodImplOptions.NoInlining)]
+        public SqlScriptTransition(double versionNumber, string name, string embeddedResourceName)
+            : this(versionNumber, name, null, Assembly.GetCallingAssembly(), embeddedResourceName)
+        { }
+
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public SqlScriptTransition(double versionNumber, string name, string description, string embeddedResourceName) 
             : this(versionNumber, name, description, Assembly.GetCallingAssembly(), embeddedResourceName) { }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public SqlScriptTransition(double versionNumber, string name, Assembly sourceAssembly, string embeddedResourceName, int timeout = SqlClientDatabase.DbDefaultCommandTimeout)
+            : this(versionNumber, name, null, sourceAssembly, embeddedResourceName, timeout) { }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         public SqlScriptTransition(double versionNumber, string name, string description, Assembly sourceAssembly, string embeddedResourceName, int timeout = SqlClientDatabase.DbDefaultCommandTimeout)
