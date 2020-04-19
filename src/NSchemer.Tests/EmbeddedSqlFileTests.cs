@@ -1,5 +1,5 @@
 ﻿using Moq;
-using NSchemer.Sql;
+using NSchemer.SqlServer;
 using NUnit.Framework;
 
 namespace NSchemer.Tests
@@ -13,7 +13,8 @@ namespace NSchemer.Tests
 
         private Mock<SqlClientDatabase> CreateDatabaseForBasicMultiStatementScriptTests()
         {
-            var database = new Mock<SqlClientDatabase>(MockBehavior.Strict, "Server=myServerAddress;Database=myDataBase;Trusted_Connection=True;");
+            var database = new Mock<SqlClientDatabase>(MockBehavior.Strict,
+                "Server=myServerAddress;Database=myDataBase;Trusted_Connection=True;");
             database.Setup(db => db.RunSql(Script1, It.IsAny<int>())).Returns(1);
             database.Setup(db => db.RunSql(Script2, It.IsAny<int>())).Returns(1);
             database.Setup(db => db.RunSql(Script3, It.IsAny<int>())).Returns(1);
@@ -24,7 +25,8 @@ namespace NSchemer.Tests
         [Test]
         public void WhenThereIsNoFinalLinefeed_AfterTheFinalGo_TheStatementIsStillExtractedCorrectly()
         {
-            var transition = new SqlScriptTransition(1, "", "", GetType().Assembly, GetType().Namespace + ".SqlFileResources.BasicMultiStatement.sql");
+            var transition = new SqlScriptTransition(1, "", GetType().Assembly,
+                GetType().Namespace + ".SqlFileResources.BasicMultiStatement.sql");
 
             var database = CreateDatabaseForBasicMultiStatementScriptTests();
             transition.Up(database.Object);
@@ -33,16 +35,17 @@ namespace NSchemer.Tests
         [Test]
         public void WhenNoAssemblyIsProvided_TheCallingAssemblyIsUsed()
         {
-            var transition = new SqlScriptTransition(1, "", "", GetType().Namespace + ".SqlFileResources.BasicMultiStatement.sql");
+            var transition =
+                new SqlScriptTransition(1, "", GetType().Namespace + ".SqlFileResources.BasicMultiStatement.sql");
 
             var database = CreateDatabaseForBasicMultiStatementScriptTests();
             transition.Up(database.Object);
         }
-        
+
         [Test]
         public void WhenAssemblyIsProvidedAsNullDirectly_TheCallingAssemblyIsUsed()
         {
-            var transition = new SqlScriptTransition(1, "", "", null, GetType().Namespace + ".SqlFileResources.BasicMultiStatement.sql");
+            var transition = new SqlScriptTransition(1, "", GetType().Namespace + ".SqlFileResources.BasicMultiStatement.sql");
 
             var database = CreateDatabaseForBasicMultiStatementScriptTests();
             transition.Up(database.Object);
@@ -54,10 +57,11 @@ namespace NSchemer.Tests
             // arrange
             const int timeout = 180;
 
-            var transition = new SqlScriptTransition(1, "", "", GetType().Namespace + ".SqlFileResources.BasicMultiStatement.sql")
-            {
-                Timeout = timeout
-            };
+            var transition =
+                new SqlScriptTransition(1, "", GetType().Namespace + ".SqlFileResources.BasicMultiStatement.sql")
+                {
+                    Timeout = timeout
+                };
 
             var database = CreateDatabaseForBasicMultiStatementScriptTests();
 
@@ -72,14 +76,16 @@ namespace NSchemer.Tests
         public void WhenNoTimeoutIsProvidedOnTheScript_TheDefaultTimeoutIsUsed()
         {
             // arrange
-            var transition = new SqlScriptTransition(1, "", "", GetType().Namespace + ".SqlFileResources.BasicMultiStatement.sql");
+            var transition =
+                new SqlScriptTransition(1, "", GetType().Namespace + ".SqlFileResources.BasicMultiStatement.sql");
             var database = CreateDatabaseForBasicMultiStatementScriptTests();
 
             // act
             transition.Up(database.Object);
 
             // assert
-            database.Verify(db => db.RunSql(It.IsAny<string>(), SqlClientDatabase.DbDefaultCommandTimeout), Times.Exactly(3));
+            database.Verify(db => db.RunSql(It.IsAny<string>(), SqlClientDatabase.DbDefaultCommandTimeout),
+                Times.Exactly(3));
         }
     }
 }

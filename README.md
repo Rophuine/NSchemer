@@ -1,19 +1,21 @@
 NSchemer [![Build status](https://ci.appveyor.com/api/projects/status/f68iuxk6mosapale?svg=true)](https://ci.appveyor.com/project/Rophuine/nschemer)
 ========
 
-.Net-based database schema management
+.Net-based database schema management for .NET Standard 2.0+
 
 # Why?
 
 If you're not managing your schema automatically, you're doing it wrong. In dev environments, automatically update the schema on project launch. In all other environments (test, UAT, production), update it during your automated deployment process.
 
-There are plenty of options out there. NSchemer gives you options, while being simple and light-weight. Microsoft SQL Server is the target platform - it's entirely possible it will work on other database platforms as well. If it doesn't and you want it to, I'm open to pull requests!
+There are plenty of options out there. NSchemer gives you options, while being simple and light-weight. Microsoft SQL Server is the target platform for now, but the architecture should support adding other platforms in the future. If you're interested in building support or having me build support for a new platform, please get in touch.
+
+Please note version 2.x contains breaking changes - please see below for an upgrade guide.
 
 # How
 
 ## Create a schema class
 
-Start off with `nuget install-package NSchemer`
+Start off with `nuget install-package NSchemer.SqlServer`
 
 Take a look at the system test project for a real example - but it's pretty simple. Inherit from `SqlClientDatabase` and implement the minimum to build. Your schema class might look like this:
 
@@ -29,7 +31,7 @@ Take a look at the system test project for a real example - but it's pretty simp
                 return new List<ITransition>
                 {
                     new CodeTransition(1, "Initial Schema", BuildTheWorld),
-                    new CodeTransition(2, "Add Widget Table", "This script adds a very important table", AddWidgets)
+                    new CodeTransition(2, "Add Widget Table", AddWidgets)
                 };
             }
         }
@@ -58,7 +60,7 @@ Take a look at the system test project for a real example - but it's pretty simp
 
 You can use the helper methods (CreateTable, AddColumn, etc.), or you can drop SQL in-line. You can also use files:
 ```csharp
-	new SqlScriptTransition(3, "Add another table", "Nothing to say here", "NSchemer.SystemTests.EmbeddedFile.sql")
+	new SqlScriptTransition(3, "Add another table", "NSchemer.SystemTests.EmbeddedFile.sql")
 ```
 
 ## Update your schema
@@ -66,6 +68,14 @@ You can use the helper methods (CreateTable, AddColumn, etc.), or you can drop S
 ```csharp
 new TestSchema("[connection string]").Update()
 ```
+
+# Upgrading from NSchemer 1.x
+
+Once you upgrade from 1.x to 2.x, you will need to install the SQL Server provider package (this was included in the NSchemer 1.x package): `nuget install-package NSchemer.SqlServer`
+
+Remove all of your `return true;`s from CodeTransitions, and change any `return false;`s (did anyone ever do that?) to throw an exception instead. There were a few other methods which had unnecessary `bool` return values removed - make sure any `return false;` is swapped with a `throw new Exception("Relevant message");` and check for anything which was handling the false return value.
+
+Optional: remove `name` from any of your version constructors which also provided a description. It was never used anyway. If you were using the constructor with only `name` it will silently start using that as the `description` instead.
 
 # Is it stable?
 
@@ -75,9 +85,9 @@ In short, NSchemer should be stable - but if you rely on it for important things
 
 # What was I thinking...
 
-### ... when I included both a name and description in transitions?
+### ... when I included both a name and description in transitions in NSchemer 1.x?
 
-Dunno. The original interface started many years ago, and I've questioned this decision many times. 1.x removes this requirement.
+Dunno. The original interface started many years ago, and I've questioned this decision many times. 2.x removes this requirement.
 
 ### ... when I decided to require version numbers?
 
@@ -87,9 +97,9 @@ I am also considering providing alternative ordering strategies (including omitt
 
 ### ... when I decided to require code transitions to return true/false?
 
-Some of the code here was written way back when, and I was trying to preserve backward-compatibility. Later versions will assume transitions succeed unless they throw an exception.
+Some of the code here was written way back when, and I was trying to preserve backward-compatibility. 2.x+ versions will assume transitions succeed unless they throw an exception.
 
-Also, my early career was very C/C++ focused, and returning bools to indicate success/failure is much more of a thing in that world. I probably wouldn't make that choice today.
+Also, my early career was very C/C++ focused, and returning bools to indicate success/failure is much more of a thing in that world. I wouldn't make that choice today.
 
 # Why ...
 
@@ -103,11 +113,11 @@ You can create foreign keys using the fluent syntax when you add a new column. I
 
 # I really think you should [zzz] in version y.x.
 
-Feel free to ping me on twitter: @rophuine. I might think you're onto something.
+Feel free to ping me on twitter: @rophuine. I might think you're onto something, I might tell you to create a PR if you really want it, or I might tell you I don't think it fits in NSchemer.
 
 # Why not just use DbUp/RoundHouse/whatever?
 
-Go for it. None of those were available when I started writing this code - it just took me years to get around to open-sourcing it.
+Go for it. None of those were available when I started writing this code - it just took me years to get around to open-sourcing it. I still prefer NSchemer, but that may just come down to familiarity. If you prefer NSchemer to any of the alternatives, please ping me on Twitter @rophuine and let me know why!
 
 # Roadmap
 

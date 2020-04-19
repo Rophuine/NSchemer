@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using NSchemer.Sql;
+using NSchemer.SqlServer;
 using NUnit.Framework;
 using Shouldly;
 

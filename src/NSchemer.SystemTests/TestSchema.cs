@@ -2,14 +2,15 @@
 using System.Collections.Generic;
 using System.Data;
 using NSchemer.Sql;
+using NSchemer.SqlServer;
 
 namespace NSchemer.SystemTests
 {
     public class TestSchema : SqlClientDatabase
     {
-        public TestSchema(string connectionString) : base(connectionString)
-        {
-        }
+        public TestSchema(string connectionString) : base(connectionString) { }
+
+        public TestSchema(Func<IDbConnection> connectionFactory) : base(connectionFactory) { }
 
         public override List<ITransition> Versions
         {
@@ -17,13 +18,13 @@ namespace NSchemer.SystemTests
             {
                 return new List<ITransition>
                 {
-                    new CodeTransition(1, "Initial Schema", "", BuildTheWorld),
-                    new CodeTransition(2, "Add Widget Table", "Script includes NOCOUNT ON", AddWidgets)
+                    new CodeTransition(1, "Initial Schema", BuildTheWorld),
+                    new CodeTransition(2, "Script includes NOCOUNT ON", AddWidgets)
                 };
             }
         }
 
-        private bool AddWidgets()
+        private void AddWidgets()
         {
             RunSql(@"
                         SET NOCOUNT ON
@@ -32,17 +33,15 @@ namespace NSchemer.SystemTests
                             WidgetName [nvarchar](50)
                         ) ON [PRIMARY]
                     ");
-            return true;
         }
 
-        private bool BuildTheWorld()
+        private void BuildTheWorld()
         {
             CreateTable("Thing", new List<Column>
             {
                 new Column("ThingName", DataType.STRING, 50),
                 new Column("ThingId", DataType.INT)
             });
-            return true;
         }
     }
 }

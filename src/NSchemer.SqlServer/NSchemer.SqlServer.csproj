@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <Version>2.0.0-alpha.6</Version>
+    <Authors>Lionell Pack</Authors>
+    <Company>Nerdhold</Company>
+    <Description>Allows easy, code-based database schema management for any .NET project targeting Standard 2.0 or higher (.NET Core 2+, .NET Framework 4.6.1+, Mono 5.4+, etc).</Description>
+    <Copyright>Copyright 2014-2020 Lionell Pack</Copyright>
+    <PackageLicenseFile></PackageLicenseFile>
+    <PackageProjectUrl>https://github.com/Rophuine/NSchemer/</PackageProjectUrl>
+    <PackageLicenseExpression>LGPL-3.0-only</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="microsoft.data.sqlclient" Version="1.1.2" />
+    <PackageReference Include="nschemer" Version="2.0.0-alpha.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+    <_Parameter1>NSchemer.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+</Project>

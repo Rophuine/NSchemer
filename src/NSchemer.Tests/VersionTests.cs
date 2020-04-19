@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using NSchemer.Sql;
+using NSchemer.SqlServer;
 using NUnit.Framework;
 using Shouldly;
 
@@ -18,7 +18,8 @@ namespace NSchemer.Tests
         }
     }
 
-    public class VersionTestDatabase : SqlClientDatabase {
+    public class VersionTestDatabase : SqlClientDatabase
+    {
         public VersionTestDatabase(string connectionString) : base(connectionString)
         {
         }
@@ -31,13 +32,11 @@ namespace NSchemer.Tests
         {
         }
 
-        public override List<ITransition> Versions
-        {
-            get { return new List<ITransition>
+        public override List<ITransition> Versions =>
+            new List<ITransition>
             {
-                new CodeTransition(3, "Name1", "Desc1", null),
-                new CodeTransition(2, "Name2", "Desc2", null)
-            }; }
-        }
+                new CodeTransition(3, "Name1", null),
+                new CodeTransition(2, "Name2", null)
+            };
     }
 }
