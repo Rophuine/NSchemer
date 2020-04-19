@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
-using NSchemer.Sql;
+using NSchemer.SqlServer;
 using NUnit.Framework;
 using Shouldly;
 
@@ -16,41 +16,43 @@ namespace NSchemer.Tests
         {
             var db = new UpdateTestDatabase("Server=myServerAddress;Database=myDataBase;Trusted_Connection=True;");
 
-            db.Versions.Add(new CodeTransition(2, "", "", () => true));
+            db.Versions.Add(new CodeTransition(2, "", () => {}));
             db.Update();
             db.LatestVersion.ShouldBe(2);
             db.IsCurrent().ShouldBe(true);
 
-            db.Versions.Add(new CodeTransition(1, "", "", () => true));
+            db.Versions.Add(new CodeTransition(1, "", () => {}));
             db.Update();
             db.LatestVersion.ShouldBe(2);
             db.IsCurrent().ShouldBe(true);
         }
 
         [Test]
-        public void WhenAMissingUpdateReturnsFalse_NSchemerShouldNotLoopEndlessly()
+        public void WhenAMissingUpdateThrows_NSchemerShouldNotLoopEndlessly()
         {
             var db = new UpdateTestDatabase("Server=myServerAddress;Database=myDataBase;Trusted_Connection=True;");
 
-            db.Versions.Add(new CodeTransition(2, "", "", () => true));
+            db.Versions.Add(new CodeTransition(2, "", () => {}));
             db.Update();
             db.LatestVersion.ShouldBe(2);
             db.IsCurrent().ShouldBe(true);
 
-            db.Versions.Add(new CodeTransition(1, "", "", () => false));    // update which fails
+            db.Versions.Add(new CodeTransition(1, "", () => throw new Exception())); // update which fails
 
             var tokenSource = new CancellationTokenSource();
             var token = tokenSource.Token;
-            int timeout = 200;
+            var timeout = 200;
             var task = Task.Factory.StartNew(() =>
-            {
-                try
                 {
-                    db.Update();
-                }
-                catch {}
-            },
-            token);
+                    try
+                    {
+                        db.Update();
+                    }
+                    catch
+                    {
+                    }
+                },
+                token);
 
             task.Wait(timeout, token).ShouldBe(true);
             db.IsCurrent().ShouldBe(false);
@@ -59,12 +61,7 @@ namespace NSchemer.Tests
 
     public class UpdateTestDatabase : SqlClientDatabase
     {
-        protected override bool RunUpdate(ITransition transition)
-        {
-            var result = transition.Up(this);
-            if (result) _appliedVersions.Add(transition.VersionNumber);
-            return result;
-        }
+        private readonly List<double> _appliedVersions = new List<double>();
 
         public UpdateTestDatabase(string connectionString) : base(connectionString)
         {
@@ -79,10 +76,14 @@ namespace NSchemer.Tests
         {
         }
 
-        private readonly List<ITransition> _versions = new List<ITransition>();
-        public override List<ITransition> Versions {get {return _versions;}}
+        public override List<ITransition> Versions { get; } = new List<ITransition>();
 
-        private readonly List<double> _appliedVersions = new List<double>(); 
+        protected override void RunUpdate(ITransition transition)
+        {
+            transition.Up(this);
+            _appliedVersions.Add(transition.VersionNumber);
+        }
+
         protected override List<double> ReadAllAppliedVersions()
         {
             return _appliedVersions;

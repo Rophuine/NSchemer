@@ -2,14 +2,14 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
-using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using Microsoft.Data.SqlClient;
 using NSchemer.ExtensionMethods;
-using NSchemer.Interfaces;
+using NSchemer.Sql;
 
-namespace NSchemer.Sql
+namespace NSchemer.SqlServer
 {
     public abstract class SqlClientDatabase : DatabaseBase, IDisposable, IVersionedDatabase
     {
@@ -17,13 +17,16 @@ namespace NSchemer.Sql
 
         public string ConnectionString { get; set; }
         protected Lazy<IDbConnection> _connection;
+        private readonly Func<IDbConnection> _connectionFactory = null;
 
         protected Func<string, IDbConnection, IDbTransaction, IDbCommand> TransactionalCommandFactory 
             = (sql, connection, transaction) => new SqlCommand(sql, connection as SqlConnection, transaction as SqlTransaction);
+
         protected Func<string, IDbConnection, IDbCommand> CommandFactory
             = (sql, connection) => new SqlCommand(sql, connection as SqlConnection);
-            
+
         SqlTransaction CurrentTransaction = null;
+
         public string SchemaName { get; set; }
 
         protected string SchemaNameWithDotOrBlank
@@ -33,6 +36,12 @@ namespace NSchemer.Sql
                 if (string.IsNullOrWhiteSpace(SchemaName)) return "";
                 return SchemaName + ".";
             }
+        }
+
+        protected IDbConnection BuildConnection()
+        {
+            if (_connectionFactory != null) return _connectionFactory();
+            return new SqlConnection(ConnectionString);
         }
 
         /// <summary>
@@ -65,7 +74,7 @@ namespace NSchemer.Sql
             }
         }
 
-        protected IDbConnection Connection
+        public IDbConnection Connection
         {
             get { return _connection.Value; }
         }
@@ -82,20 +91,19 @@ namespace NSchemer.Sql
             return true;
         }
 
-        public override bool AddRow(string tablename, string data)
+        public override void AddRow(string tablename, string data)
         {
-            return AddRow(tablename, data, false);
+            AddRow(tablename, data, false);
         }
 
-        public bool AddRow(string tablename, string data, bool checkInsertCount)
+        public void AddRow(string tablename, string data, bool checkInsertCount)
         {
             string sql = string.Format("INSERT INTO {0}{1} VALUES ({2})", SchemaNameWithDotOrBlank, tablename, data);
             int rows = RunSql(sql);
-            if (checkInsertCount && (rows == 0 || rows > 1)) return false;
-            return true;            
+            if (checkInsertCount && (rows == 0 || rows > 1)) throw new Exception("Failed to insert row.");
         }
 
-        public bool AddRow(string tableName, string[] columns, string[] sqlFormattedData, bool checkInsertCount = false)
+        public void AddRow(string tableName, string[] columns, string[] sqlFormattedData, bool checkInsertCount = false)
         {
             string sql = string.Format("INSERT INTO {0}{1} ({2}) VALUES ({3})",
                 SchemaNameWithDotOrBlank,
@@ -103,8 +111,7 @@ namespace NSchemer.Sql
                 string.Join(",", columns.Select(column => "[" + column + "]")),
                 string.Join(",", sqlFormattedData));
             int rows = RunSql(sql);
-            if (checkInsertCount && (rows == 0 || rows > 1)) return false;
-            return true;
+            if (checkInsertCount && (rows == 0 || rows > 1)) throw new Exception("Failed to insert row.");
         }
 
         public void Update()
@@ -119,9 +126,18 @@ namespace NSchemer.Sql
                 if (!AllVersions.Contains(v.VersionNumber) && v.VersionNumber < DatabaseVersion)
                     missingUpdates.Add(v);
             }
+
             missingUpdates.Sort((x, y) => x.VersionNumber.CompareTo(y.VersionNumber));
             foreach (ITransition v in missingUpdates)
-                if (!RunUpdate(v)) throw new Exception(string.Format("Version number {0} reported an error applying the update.", v.VersionNumber));
+                try
+                {
+                    RunUpdate(v);
+                }
+                catch (Exception ex)
+                {
+
+                    throw new Exception($"Version number {v.VersionNumber} failed to apply the update.", ex);
+                }
 
             // now update the remaining 
             while (!IsCurrent() && appliedUpdate)
@@ -130,30 +146,32 @@ namespace NSchemer.Sql
                 {
                     if (v.VersionNumber > DatabaseVersion)
                     {
-                        appliedUpdate = RunUpdate(v);
-                        if (!appliedUpdate) throw new Exception(string.Format("Version number {0} reported an error applying the update.", v.VersionNumber));
+                        try
+                        {
+                            RunUpdate(v);
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new Exception($"Version number {v.VersionNumber} failed to apply the update.", ex);
+                        }
                     }
                 }
         }
 
-        protected virtual bool RunUpdate(ITransition transition)
+        protected virtual void RunUpdate(ITransition transition)
         {
             if (transition.VersionNumber <= 0) throw new Exception("NSchemer expects all version numbers to be greater than zero.");
-            var result = transition.Up(this);
-            if (result)
+            transition.Up(this);
+            // Add the version entry
+            try
             {
-                // Add the version entry
-                try
-                {
-                    result = AddRow(VersionTable, string.Format("{0},{1}", transition.VersionNumber, TimeFunction));
-                }
-                catch (Exception ex)
-                {
-                    throw new Exception(string.Format("Version upgrade to version {0} completed successfully, but the {1} table could not be updated to reflect this.",
-                        transition.VersionNumber, VersionTable), ex);
-                }
+                AddRow(VersionTable, string.Format("{0},{1}", transition.VersionNumber, TimeFunction));
             }
-            return result;
+            catch (Exception ex)
+            {
+                throw new Exception(string.Format("Version upgrade to version {0} completed successfully, but the {1} table could not be updated to reflect this.",
+                    transition.VersionNumber, VersionTable), ex);
+            }
         }
 
         /// <summary>
@@ -174,7 +192,7 @@ namespace NSchemer.Sql
             RunSql(sql);
         }
 
-        public bool AddColumn(string tablename, Column column, int dataUpdateTimeout = DbDefaultCommandTimeout)
+        public void AddColumn(string tablename, Column column, int dataUpdateTimeout = DbDefaultCommandTimeout)
         {
             if (column.PrimaryKey) throw new NotSupportedException("NSchemer doesn't currently support adding a primary key column to an existing table via a CodeTransition.");
             if (!column.nullable && column.defaultSqlData == null) throw new NotSupportedException("If adding a non-nullable column, you must provide a default value for existing rows.");
@@ -202,7 +220,6 @@ namespace NSchemer.Sql
                 if (!(ex.Message.Contains("Column names in each table must be unique") && ex.Message.Contains("more than once")))
                     throw ex;
             }
-            return true;
         }
 
         public void CreateTable(string TableName, params Column[] cols)
@@ -348,9 +365,7 @@ namespace NSchemer.Sql
             }
         }
 
-        public SqlClientDatabase(string connectionString)
-            : this(connectionString, "dbo")
-        { }
+        public SqlClientDatabase(string connectionString) : this(connectionString, "dbo") { }
         public SqlClientDatabase(string connectionString, string schemaName)
         {
             SchemaName = schemaName;
@@ -364,8 +379,12 @@ namespace NSchemer.Sql
             });
         }
 
-        public SqlClientDatabase(Func<IDbConnection> connectionProvider)
+        public SqlClientDatabase(Func<IDbConnection> connectionProvider) : this(connectionProvider, "dbo") { }
+
+        public SqlClientDatabase(Func<IDbConnection> connectionProvider, string schemaName)
         {
+            _connectionFactory = connectionProvider;
+            SchemaName = schemaName;
             _connection = new Lazy<IDbConnection>(() =>
             {
                 var conn = connectionProvider();
@@ -406,19 +425,21 @@ namespace NSchemer.Sql
         /// <param name="SqlString"></param>
         /// <param name="timeOut">The number of seconds to wait when executing the command (0 = indefinite)</param>
         /// <returns>Number of rows affected</returns>
-        public virtual int RunSql(string SqlString, int timeOut)
+        public override int RunSql(string SqlString, int timeOut)
         {
-            IDbCommand comm = NewCommand(SqlString);
-            if (timeOut > DbDefaultCommandTimeout)
-                comm.CommandTimeout = timeOut;
+            using (IDbCommand comm = NewCommand(SqlString))
+            {
+                if (timeOut > DbDefaultCommandTimeout)
+                    comm.CommandTimeout = timeOut;
 
-            return comm.ExecuteNonQuery();
+                return comm.ExecuteNonQuery();
+            }
         }
 
         /// <summary>
         /// Runs a SQL command, returns the number of rows affected
         /// </summary>
-        public virtual int RunSql(string SqlString)
+        public override int RunSql(string SqlString)
         {
             return RunSql(SqlString, DbDefaultCommandTimeout);
         }
@@ -430,14 +451,16 @@ namespace NSchemer.Sql
         }
         protected object RunScalar(string Sql)
         {
-            IDbCommand command = CommandFactory(Sql, Connection);
-            command.CommandType = System.Data.CommandType.Text;
-            return command.ExecuteScalar();
+            using (IDbCommand command = CommandFactory(Sql, Connection))
+            {
+                command.CommandType = System.Data.CommandType.Text;
+                return command.ExecuteScalar();
+            }
         }
         public SqlDataReader RunQuery(string sql)
         {
-            SqlConnection tmpConnection = new SqlConnection(this.ConnectionString);
-            tmpConnection.Open();
+            SqlConnection tmpConnection = BuildConnection() as SqlConnection;
+            if (tmpConnection.State != ConnectionState.Open) tmpConnection.Open();
             SqlCommand command = new SqlCommand(sql, tmpConnection);
             command.CommandType = System.Data.CommandType.Text;
             return command.ExecuteReader(System.Data.CommandBehavior.CloseConnection);

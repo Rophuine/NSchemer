@@ -6,31 +6,42 @@ using System.Resources;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
-namespace NSchemer.Sql
+namespace NSchemer.SqlServer
 {
     public class SqlScriptTransition : ITransition
     {
+
+
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public SqlScriptTransition(double versionNumber, string name, string embeddedResourceName)
-            : this(versionNumber, name, null, Assembly.GetCallingAssembly(), embeddedResourceName)
+        public SqlScriptTransition(double versionNumber, string embeddedResourceName)
+            : this(versionNumber, null, Assembly.GetCallingAssembly(), embeddedResourceName)
         { }
 
+        [Obsolete("NSchemer no longer uses name in transitions.")]
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public SqlScriptTransition(double versionNumber, string name, string description, string embeddedResourceName)
+            : this(versionNumber, description, Assembly.GetCallingAssembly(), embeddedResourceName) { }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public SqlScriptTransition(double versionNumber, string name, string description, string embeddedResourceName) 
-            : this(versionNumber, name, description, Assembly.GetCallingAssembly(), embeddedResourceName) { }
+        public SqlScriptTransition(double versionNumber, string description, string embeddedResourceName) 
+            : this(versionNumber, description, Assembly.GetCallingAssembly(), embeddedResourceName) { }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public SqlScriptTransition(double versionNumber, string name, Assembly sourceAssembly, string embeddedResourceName, int timeout = SqlClientDatabase.DbDefaultCommandTimeout)
-            : this(versionNumber, name, null, sourceAssembly, embeddedResourceName, timeout) { }
+        public SqlScriptTransition(double versionNumber, Assembly sourceAssembly, string embeddedResourceName, int timeout = SqlClientDatabase.DbDefaultCommandTimeout)
+            : this(versionNumber, null, sourceAssembly, embeddedResourceName, timeout) { }
 
+
+        [Obsolete("NSchemer no longer uses name in transitions.")]
         [MethodImpl(MethodImplOptions.NoInlining)]
         public SqlScriptTransition(double versionNumber, string name, string description, Assembly sourceAssembly, string embeddedResourceName, int timeout = SqlClientDatabase.DbDefaultCommandTimeout)
+            : this(versionNumber, description, sourceAssembly, embeddedResourceName, timeout) { }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public SqlScriptTransition(double versionNumber, string description, Assembly sourceAssembly, string embeddedResourceName, int timeout = SqlClientDatabase.DbDefaultCommandTimeout)
         {
             SourceAssembly = sourceAssembly ?? Assembly.GetCallingAssembly();
             EmbeddedResourceName = embeddedResourceName;
             Description = description;
-            Name = name;
             VersionNumber = versionNumber;
             Timeout = timeout;
         }
@@ -39,14 +50,13 @@ namespace NSchemer.Sql
         public string EmbeddedResourceName { get; private set; }
         public int Timeout { get; set; }
 
-        public bool Up(DatabaseBase database)
+        public void Up(DatabaseBase database)
         {
             string script = ReadSqlFile(SourceAssembly, EmbeddedResourceName);
             var sqlDatabase = database as SqlClientDatabase;
             if (sqlDatabase == null)
                 throw new InvalidOperationException("Tried to run a SQL script on a non-SQL database.");
             RunMultistepSqlScript(script, sqlDatabase, Timeout);
-            return true;
         }
 
         public static void RunMultistepSqlScript(string script, SqlClientDatabase sqlDatabase, int timeout = SqlClientDatabase.DbDefaultCommandTimeout)
@@ -70,7 +80,6 @@ namespace NSchemer.Sql
             }
         }
 
-        public string Name { get; private set; }
         public string Description { get; private set; }
         public double VersionNumber { get; private set; }
 

@@ -1,4 +1,4 @@
 ﻿namespace NSchemer
 {
-    public delegate bool VersionUpdateHandler();
+    public delegate void VersionUpdateHandler();
 }
