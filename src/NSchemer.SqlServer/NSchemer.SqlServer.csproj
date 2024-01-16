@@ -14,7 +14,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="microsoft.data.sqlclient" Version="1.1.2" />
+    <PackageReference Include="microsoft.data.sqlclient" Version="2.1.7" />
     <PackageReference Include="nschemer" Version="2.0.0-alpha.6" />
   </ItemGroup>
 
